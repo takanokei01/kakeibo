@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sample/models/expense.dart';
 import 'package:sample/widgets/num_pad.dart';
+import 'package:sample/screens/history_screen.dart';
 
 class MainPageWidget extends StatefulWidget {
   @override
@@ -42,7 +43,7 @@ class _MainPageWidget extends State<MainPageWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('家計簿')), 
+      appBar: AppBar(title: const Text('MY家計簿')), 
       body: SafeArea(
         child: Column(
           children: [
@@ -51,12 +52,32 @@ class _MainPageWidget extends State<MainPageWidget> {
               width: double.infinity,
               color: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('今月いくら使ったか', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 8),
-                  Text('¥${_monthTotal.toString()}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.red)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('今月いくら使ったか', style: TextStyle(fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text('¥${_monthTotal.toString()}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.red)),
+                    ],
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HistoryScreen(expenses: _expenses),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                      child: Text('履歴を見る', style: TextStyle(color: Colors.white, fontSize: 14)),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -82,47 +103,63 @@ class _MainPageWidget extends State<MainPageWidget> {
               ),
             ),
 
-            // テンキー（高さを柔軟にしてオーバーフローを防ぐ）
-            Flexible(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: NumPad(onSubmit: _addExpense),
-              ),
-            ),
-
-            const Divider(),
-
-            // 直近支出リスト
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-              child: Align(alignment: Alignment.centerLeft, child: Text('直近の支出')),
-            ),
+            // 左右分割：左に直近支出リスト、右にテンキー
             Expanded(
-              child: _expenses.isEmpty
-                  ? const Center(child: Text('まだ支出がありません'))
-                  : ListView.builder(
-                      itemCount: _expenses.length,
-                      itemBuilder: (context, index) {
-                        final e = _expenses[index];
-                        return Dismissible(
-                          key: Key(e.id),
-                          direction: DismissDirection.endToStart,
-                          onDismissed: (_) => _removeExpense(e.id),
-                          background: Container(
-                            color: Colors.red,
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            child: const Icon(Icons.delete, color: Colors.white),
-                          ),
-                          child: ListTile(
-                            title: Text(e.category),
-                            subtitle: Text('${e.date.year}/${e.date.month}/${e.date.day}'),
-                            trailing: Text('¥${e.amount}'),
-                          ),
-                        );
-                      },
+              child: Row(
+                children: [
+                  // 左側：直近支出リスト
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                          child: Text('直近の支出', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                        Expanded(
+                          child: _expenses.isEmpty
+                              ? const Center(child: Text('まだ支出がありません'))
+                              : ListView.builder(
+                                  itemCount: _expenses.length,
+                                  itemBuilder: (context, index) {
+                                    final e = _expenses[index];
+                                    return Dismissible(
+                                      key: Key(e.id),
+                                      direction: DismissDirection.endToStart,
+                                      onDismissed: (_) => _removeExpense(e.id),
+                                      background: Container(
+                                        color: Colors.red,
+                                        alignment: Alignment.centerRight,
+                                        padding: const EdgeInsets.only(right: 10),
+                                        child: const Icon(Icons.delete, color: Colors.white, size: 20),
+                                      ),
+                                      child: ListTile(
+                                        dense: true,
+                                        title: Text(e.category, style: const TextStyle(fontSize: 12)),
+                                        subtitle: Text('${e.date.month}/${e.date.day}', style: const TextStyle(fontSize: 10)),
+                                        trailing: Text('¥${e.amount}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        )
+                      ],
                     ),
+                  ),
+                  
+                  const VerticalDivider(width: 1),
+
+                  // 右側：テンキー
+                  Expanded(
+                    flex: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: NumPad(onSubmit: _addExpense),
+                    ),
+                  ),
+                ],
+              ),
             )
           ],
         ),
