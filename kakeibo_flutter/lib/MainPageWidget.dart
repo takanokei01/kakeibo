@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sample/data/expense_database.dart';
 import 'package:sample/models/expense.dart';
 import 'package:sample/widgets/num_pad.dart';
 import 'package:sample/screens/history_screen.dart';
@@ -15,7 +16,21 @@ class _MainPageWidget extends State<MainPageWidget> {
   final List<String> _categories = ['食費', '交通費', '日用品', 'その他'];
   String _selectedCategory = '食費';
 
-  void _addExpense(int amount) {
+  @override
+  void initState() {
+    super.initState();
+    _loadExpenses();
+  }
+
+  Future<void> _loadExpenses() async {
+    final databaseExpenses = await ExpenseDatabase.getExpenses();
+    setState(() {
+      _expenses.clear();
+      _expenses.addAll(databaseExpenses);
+    });
+  }
+
+  Future<void> _addExpense(int amount) async {
     final e = Expense(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       category: _selectedCategory,
@@ -25,12 +40,14 @@ class _MainPageWidget extends State<MainPageWidget> {
     setState(() {
       _expenses.insert(0, e);
     });
+    await ExpenseDatabase.insertExpense(e);
   }
 
-  void _removeExpense(String id) {
+  Future<void> _removeExpense(String id) async {
     setState(() {
       _expenses.removeWhere((e) => e.id == id);
     });
+    await ExpenseDatabase.deleteExpense(id);
   }
 
   int get _monthTotal {

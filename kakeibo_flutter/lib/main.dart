@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sample/data/expense_database.dart';
 import 'package:sample/HomePage.dart';
 import 'FirstPage.dart';
 import 'SecondPage.dart';
@@ -6,7 +7,9 @@ import 'ThirdPage.dart';
 import '/list/CouponListView.dart';
 import'MainPageWidget.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ExpenseDatabase.init();
   runApp(MyApp());
 }
 
@@ -20,7 +23,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: '家計簿',
       theme: ThemeData(
         // This is the theme of your application.
         //
