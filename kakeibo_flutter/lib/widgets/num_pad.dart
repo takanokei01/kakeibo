@@ -10,7 +10,7 @@ class NumPad extends StatefulWidget {
 
 class _NumPadState extends State<NumPad> {
   String _input = '';
-  String _previousValue = '';
+  String _formula = '';
   String _operator = '';
   bool _shouldResetInput = false;
 
@@ -27,36 +27,52 @@ class _NumPadState extends State<NumPad> {
   }
 
   void _setOperator(String op) {
-    if (_input.isEmpty) return;
-    _previousValue = _input;
-    _operator = op;
-    _shouldResetInput = true;
+    setState(() {
+      if (_input.isEmpty) {
+        if (_formula.isEmpty) return;
+        if (_formula.trim().endsWith('+') || _formula.trim().endsWith('−') || _formula.trim().endsWith('×') || _formula.trim().endsWith('÷')) {
+          _formula = _formula.trim().substring(0, _formula.trim().length - 1).trimRight() + ' $op ';
+        }
+        _operator = op;
+        return;
+      }
+
+      _formula = '$_formula${_input.trim()} $op ';
+      _operator = op;
+      _input = '';
+      _shouldResetInput = false;
+    });
   }
 
   void _calculate() {
-    if (_input.isEmpty || _previousValue.isEmpty || _operator.isEmpty) return;
-    final prev = int.tryParse(_previousValue) ?? 0;
-    final curr = int.tryParse(_input) ?? 0;
-    int result = 0;
+    final expression = (_formula + _input).trim();
+    if (expression.isEmpty) return;
+    final tokens = expression.split(' ').where((t) => t.isNotEmpty).toList();
+    if (tokens.isEmpty) return;
 
-    switch (_operator) {
-      case '+':
-        result = prev + curr;
-        break;
-      case '−':
-        result = prev - curr;
-        break;
-      case '×':
-        result = prev * curr;
-        break;
-      case '÷':
-        result = curr != 0 ? (prev ~/ curr) : 0;
-        break;
+    int result = int.tryParse(tokens.first) ?? 0;
+    for (var i = 1; i + 1 < tokens.length; i += 2) {
+      final op = tokens[i];
+      final next = int.tryParse(tokens[i + 1]) ?? 0;
+      switch (op) {
+        case '+':
+          result += next;
+          break;
+        case '−':
+          result -= next;
+          break;
+        case '×':
+          result *= next;
+          break;
+        case '÷':
+          result = next != 0 ? (result ~/ next) : result;
+          break;
+      }
     }
 
     setState(() {
       _input = result.toString();
-      _previousValue = '';
+      _formula = '';
       _operator = '';
       _shouldResetInput = true;
     });
@@ -71,7 +87,7 @@ class _NumPadState extends State<NumPad> {
   void _clear() {
     setState(() {
       _input = '';
-      _previousValue = '';
+      _formula = '';
       _operator = '';
       _shouldResetInput = false;
     });
@@ -102,26 +118,58 @@ class _NumPadState extends State<NumPad> {
   }
 
   Widget _opBtn(String label, void Function() onTap) {
+    final bool isActive = _operator == label;
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.all(2.0),
         child: ElevatedButton(
           onPressed: onTap,
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            side: isActive ? const BorderSide(width: 2.0, color: Colors.white) : null,
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(label, style: const TextStyle(fontSize: 18, color: Colors.white)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.white,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
+  String get _formulaText {
+    if (_formula.isEmpty) return '';
+    if (_input.isEmpty) return _formula.trimRight();
+    return '$_formula$_input';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_formulaText.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
+            alignment: Alignment.centerRight,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: Text(
+                _formulaText,
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
           alignment: Alignment.centerRight,
