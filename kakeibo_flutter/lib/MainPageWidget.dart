@@ -23,11 +23,16 @@ class _MainPageWidget extends State<MainPageWidget> {
   }
 
   Future<void> _loadExpenses() async {
-    final databaseExpenses = await ExpenseDatabase.getExpenses();
-    setState(() {
-      _expenses.clear();
-      _expenses.addAll(databaseExpenses);
-    });
+    try {
+      final databaseExpenses = await ExpenseDatabase.getExpenses();
+      setState(() {
+        _expenses.clear();
+        _expenses.addAll(databaseExpenses);
+      });
+      print('✓ ロード完了: ${databaseExpenses.length}件の支出を読み込みました');
+    } catch (e) {
+      print('✗ ロードエラー: $e');
+    }
   }
 
   Future<void> _addExpense(int amount) async {
@@ -40,7 +45,16 @@ class _MainPageWidget extends State<MainPageWidget> {
     setState(() {
       _expenses.insert(0, e);
     });
-    await ExpenseDatabase.insertExpense(e);
+    try {
+      await ExpenseDatabase.insertExpense(e);
+      print('✓ 保存完了: ¥$amount($_selectedCategory) ID: ${e.id}');
+    } catch (error) {
+      print('✗ 保存エラー: $error');
+      // エラー時はUIから削除
+      setState(() {
+        _expenses.removeWhere((ex) => ex.id == e.id);
+      });
+    }
   }
 
   Future<void> _removeExpense(String id) async {
