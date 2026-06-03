@@ -41,46 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDlVdwu_Amjl5ySaaEeYD8GeHnRsxPLUFo',
-    appId: '1:552434533572:web:bac9d5aa15153daf9db591',
-    messagingSenderId: '552434533572',
-    projectId: 'chirashi-6c92d',
-    authDomain: 'chirashi-6c92d.firebaseapp.com',
-    storageBucket: 'chirashi-6c92d.firebasestorage.app',
+    apiKey: 'AIzaSyCA9kfohE5-tDrCODzM3pY8H1thKPapujQ',
+    appId: '1:74063304979:web:80a68fd44de65ad10822e6',
+    messagingSenderId: '74063304979',
+    projectId: 'kakeiboard-17eea',
+    authDomain: 'kakeiboard-17eea.firebaseapp.com',
+    storageBucket: 'kakeiboard-17eea.firebasestorage.app',
+    measurementId: 'G-5CNQMV4TRB',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAwsOsQcTfbVXDow2CRz1AmqrvIQGuoljg',
-    appId: '1:552434533572:android:f6cbd3b2486dbd4e9db591',
-    messagingSenderId: '552434533572',
-    projectId: 'chirashi-6c92d',
-    storageBucket: 'chirashi-6c92d.firebasestorage.app',
+    apiKey: 'AIzaSyCX1MTKYFqC3bYDlWxdxZm627dY_EnpUJ8',
+    appId: '1:74063304979:android:e6fc59841d14fb4e0822e6',
+    messagingSenderId: '74063304979',
+    projectId: 'kakeiboard-17eea',
+    storageBucket: 'kakeiboard-17eea.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBxtERg3JMkLPaLkmg8mPZ3-LCo6qmbKCk',
-    appId: '1:552434533572:ios:a748423cfdc9d8ad9db591',
-    messagingSenderId: '552434533572',
-    projectId: 'chirashi-6c92d',
-    storageBucket: 'chirashi-6c92d.firebasestorage.app',
+    apiKey: 'AIzaSyCMHd_PnyqQFm891z-lfwHe8khyigT7VSM',
+    appId: '1:74063304979:ios:e5178cd0688522110822e6',
+    messagingSenderId: '74063304979',
+    projectId: 'kakeiboard-17eea',
+    storageBucket: 'kakeiboard-17eea.firebasestorage.app',
     iosBundleId: 'com.example.sample',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBxtERg3JMkLPaLkmg8mPZ3-LCo6qmbKCk',
-    appId: '1:552434533572:ios:a748423cfdc9d8ad9db591',
-    messagingSenderId: '552434533572',
-    projectId: 'chirashi-6c92d',
-    storageBucket: 'chirashi-6c92d.firebasestorage.app',
+    apiKey: 'AIzaSyCMHd_PnyqQFm891z-lfwHe8khyigT7VSM',
+    appId: '1:74063304979:ios:e5178cd0688522110822e6',
+    messagingSenderId: '74063304979',
+    projectId: 'kakeiboard-17eea',
+    storageBucket: 'kakeiboard-17eea.firebasestorage.app',
     iosBundleId: 'com.example.sample',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDlVdwu_Amjl5ySaaEeYD8GeHnRsxPLUFo',
-    appId: '1:552434533572:web:0241c8b89f8a79909db591',
-    messagingSenderId: '552434533572',
-    projectId: 'chirashi-6c92d',
-    authDomain: 'chirashi-6c92d.firebaseapp.com',
-    storageBucket: 'chirashi-6c92d.firebasestorage.app',
+    apiKey: 'AIzaSyCA9kfohE5-tDrCODzM3pY8H1thKPapujQ',
+    appId: '1:74063304979:web:c6c3d7b402d173c90822e6',
+    messagingSenderId: '74063304979',
+    projectId: 'kakeiboard-17eea',
+    authDomain: 'kakeiboard-17eea.firebaseapp.com',
+    storageBucket: 'kakeiboard-17eea.firebasestorage.app',
+    measurementId: 'G-L6D81SBLQ0',
   );
+
 }

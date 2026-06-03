@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "552434533572",
-    "project_id": "chirashi-6c92d",
-    "storage_bucket": "chirashi-6c92d.firebasestorage.app"
+    "project_number": "74063304979",
+    "project_id": "kakeiboard-17eea",
+    "storage_bucket": "kakeiboard-17eea.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:552434533572:android:4a8a26660b7127169db591",
-        "android_client_info": {
-          "package_name": "com.example.appkuratoku"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAwsOsQcTfbVXDow2CRz1AmqrvIQGuoljg"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:552434533572:android:f6cbd3b2486dbd4e9db591",
+        "mobilesdk_app_id": "1:74063304979:android:e6fc59841d14fb4e0822e6",
         "android_client_info": {
           "package_name": "com.example.sample"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAwsOsQcTfbVXDow2CRz1AmqrvIQGuoljg"
+          "current_key": "AIzaSyCX1MTKYFqC3bYDlWxdxZm627dY_EnpUJ8"
         }
       ],
       "services": {
