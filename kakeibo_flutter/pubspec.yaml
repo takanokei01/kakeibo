@@ -37,7 +37,9 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   firebase_core: ^4.10.0
+  firebase_core_web: ^3.8.0
   firebase_auth: ^6.5.2
+  firebase_auth_web: ^6.2.2
   cloud_firestore: ^6.5.0
 
 dev_dependencies:

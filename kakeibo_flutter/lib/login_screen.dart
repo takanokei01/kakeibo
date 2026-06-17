@@ -75,9 +75,13 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _errorText = e.message ?? '認証に失敗しました。';
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // Web/desktop でプラグイン未登録の問題が発生した場合、
+      // ここで例外内容を表示して診断できるようにします。
+      debugPrint('Firebase Auth error: $e');
+      debugPrint('$stackTrace');
       setState(() {
-        _errorText = '予期しないエラーが発生しました。';
+        _errorText = e.toString();
       });
     } finally {
       setState(() {
