@@ -78,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
       TextInput.finishAutofillContext();
     } on FirebaseAuthException catch (e) {
       setState(() {
-        _errorText = e.message ?? '認証に失敗しました。';
+        _errorText = _authErrorMessage(e);
       });
     } catch (e, stackTrace) {
       // Web/desktop でプラグイン未登録の問題が発生した場合、
@@ -92,6 +92,23 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _loading = false;
       });
+    }
+  }
+
+  String _authErrorMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-credential':
+      case 'user-not-found':
+      case 'wrong-password':
+        return 'メールアドレスまたはパスワードが間違っています。';
+      case 'invalid-email':
+        return 'メールアドレスの形式が正しくありません。';
+      case 'email-already-in-use':
+        return 'このメールアドレスはすでに登録されています。';
+      case 'weak-password':
+        return 'パスワードは6文字以上で入力してください。';
+      default:
+        return '認証に失敗しました。時間をおいてもう一度お試しください。';
     }
   }
 

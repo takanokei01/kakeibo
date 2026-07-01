@@ -100,6 +100,11 @@ class ExpenseDatabase {
     }
   }
 
+  /// 更新: Hive と Firestore の両方に上書き保存します。
+  static Future<void> updateExpense(Expense expense) async {
+    await insertExpense(expense);
+  }
+
   /// 削除: Hive と Firestore の両方から削除します。
   static Future<void> deleteExpense(String id) async {
     try {

@@ -67,7 +67,10 @@ class HistoryScreen extends StatelessWidget {
                       return ListTile(
                         title: Text(e.category),
                         subtitle: Text(
-                            '${e.date.year}/${e.date.month}/${e.date.day}'),
+                          e.memo.isEmpty
+                              ? '${e.date.year}/${e.date.month}/${e.date.day}'
+                              : '${e.date.year}/${e.date.month}/${e.date.day}\n${e.memo}',
+                        ),
                         trailing: Text('¥${e.amount}',
                             style: const TextStyle(fontWeight: FontWeight.bold)),
                       );

@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sample/data/expense_database.dart';
 import 'package:sample/models/expense.dart';
 import 'package:sample/widgets/num_pad.dart';
@@ -63,6 +64,50 @@ class _MainPageWidget extends State<MainPageWidget> {
       _expenses.removeWhere((e) => e.id == id);
     });
     await ExpenseDatabase.deleteExpense(id);
+  }
+
+  Future<void> _editExpense(Expense expense) async {
+    final updated = await showDialog<Expense>(
+      context: context,
+      builder: (context) => _ExpenseEditDialog(
+        expense: expense,
+        categories: _categories,
+      ),
+    );
+
+    if (updated == null) return;
+
+    setState(() {
+      final index = _expenses.indexWhere((e) => e.id == updated.id);
+      if (index != -1) {
+        _expenses[index] = updated;
+      }
+    });
+    await ExpenseDatabase.updateExpense(updated);
+  }
+
+  Future<void> _confirmDeleteExpense(Expense expense) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('支出を削除しますか？'),
+        content: Text('${expense.category} ¥${expense.amount} を削除します。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      await _removeExpense(expense.id);
+    }
   }
 
   int get _monthTotal {
@@ -187,21 +232,40 @@ class _MainPageWidget extends State<MainPageWidget> {
                         itemCount: _expenses.length,
                         itemBuilder: (context, index) {
                           final e = _expenses[index];
-                          return Dismissible(
-                            key: Key(e.id),
-                            direction: DismissDirection.endToStart,
-                            onDismissed: (_) => _removeExpense(e.id),
-                            background: Container(
-                              color: Colors.red,
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 10),
-                              child: const Icon(Icons.delete, color: Colors.white, size: 20),
+                          return ListTile(
+                            dense: true,
+                            title: Text(e.category, style: const TextStyle(fontSize: 12)),
+                            subtitle: Text(
+                              e.memo.isEmpty
+                                  ? '${e.date.month}/${e.date.day}'
+                                  : '${e.date.month}/${e.date.day}  ${e.memo}',
+                              style: const TextStyle(fontSize: 10),
                             ),
-                            child: ListTile(
-                              dense: true,
-                              title: Text(e.category, style: const TextStyle(fontSize: 12)),
-                              subtitle: Text('${e.date.month}/${e.date.day}', style: const TextStyle(fontSize: 10)),
-                              trailing: Text('¥${e.amount}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('¥${e.amount}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_horiz),
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _editExpense(e);
+                                    } else if (value == 'delete') {
+                                      _confirmDeleteExpense(e);
+                                    }
+                                  },
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text('編集'),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('削除'),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -211,6 +275,120 @@ class _MainPageWidget extends State<MainPageWidget> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ExpenseEditDialog extends StatefulWidget {
+  final Expense expense;
+  final List<String> categories;
+
+  const _ExpenseEditDialog({
+    required this.expense,
+    required this.categories,
+  });
+
+  @override
+  State<_ExpenseEditDialog> createState() => _ExpenseEditDialogState();
+}
+
+class _ExpenseEditDialogState extends State<_ExpenseEditDialog> {
+  late String _category;
+  late TextEditingController _amountController;
+  late TextEditingController _memoController;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _category = widget.categories.contains(widget.expense.category)
+        ? widget.expense.category
+        : widget.categories.first;
+    _amountController = TextEditingController(text: widget.expense.amount.toString());
+    _memoController = TextEditingController(text: widget.expense.memo);
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _memoController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final amount = int.tryParse(_amountController.text.trim());
+    if (amount == null || amount <= 0) {
+      setState(() {
+        _errorText = '金額を正しく入力してください';
+      });
+      return;
+    }
+
+    Navigator.pop(
+      context,
+      Expense(
+        id: widget.expense.id,
+        category: _category,
+        amount: amount,
+        date: widget.expense.date,
+        memo: _memoController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('支出を編集'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              value: _category,
+              decoration: const InputDecoration(labelText: 'カテゴリ'),
+              items: widget.categories
+                  .map((category) => DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _category = value;
+                });
+              },
+            ),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: '金額'),
+            ),
+            TextField(
+              controller: _memoController,
+              decoration: const InputDecoration(labelText: 'メモ'),
+              maxLines: 3,
+            ),
+            if (_errorText != null) ...[
+              const SizedBox(height: 8),
+              Text(_errorText!, style: const TextStyle(color: Colors.red)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('キャンセル'),
+        ),
+        TextButton(
+          onPressed: _save,
+          child: const Text('保存'),
+        ),
+      ],
     );
   }
 }
