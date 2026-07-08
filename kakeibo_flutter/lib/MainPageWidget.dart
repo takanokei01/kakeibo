@@ -69,10 +69,8 @@ class _MainPageWidget extends State<MainPageWidget> {
   Future<void> _editExpense(Expense expense) async {
     final updated = await showDialog<Expense>(
       context: context,
-      builder: (context) => _ExpenseEditDialog(
-        expense: expense,
-        categories: _categories,
-      ),
+      builder: (context) =>
+          _ExpenseEditDialog(expense: expense, categories: _categories),
     );
 
     if (updated == null) return;
@@ -120,22 +118,37 @@ class _MainPageWidget extends State<MainPageWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('MY家計簿'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'ログアウト',
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
+      appBar: AppBar(titleSpacing: 0, title: const Text('MY家計簿')),
+      drawer: Drawer(
+        child: SafeArea(
+          child: Column(
+            children: [
+              const ListTile(
+                title: Text(
+                  'MY家計簿',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('ログアウト'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await FirebaseAuth.instance.signOut();
+                },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 8.0,
+              horizontal: 12.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -143,16 +156,29 @@ class _MainPageWidget extends State<MainPageWidget> {
                 Container(
                   width: double.infinity,
                   color: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 8,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('今月いくら使ったか', style: TextStyle(fontSize: 16)),
+                          const Text(
+                            '今月いくら使ったか',
+                            style: TextStyle(fontSize: 16),
+                          ),
                           const SizedBox(height: 8),
-                          Text('¥${_monthTotal.toString()}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.red)),
+                          Text(
+                            '¥${_monthTotal.toString()}',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
                         ],
                       ),
                       ElevatedButton(
@@ -160,14 +186,23 @@ class _MainPageWidget extends State<MainPageWidget> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => HistoryScreen(expenses: _expenses),
+                              builder: (context) =>
+                                  HistoryScreen(expenses: _expenses),
                             ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                        ),
                         child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-                          child: Text('履歴を見る', style: TextStyle(color: Colors.white, fontSize: 14)),
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.0,
+                            horizontal: 8.0,
+                          ),
+                          child: Text(
+                            '履歴を見る',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
+                          ),
                         ),
                       ),
                     ],
@@ -178,21 +213,28 @@ class _MainPageWidget extends State<MainPageWidget> {
 
                 // カテゴリ選択
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4.0,
+                    vertical: 4.0,
+                  ),
                   child: Row(
                     children: [
                       const Text('カテゴリ：'),
                       const SizedBox(width: 8),
                       DropdownButton<String>(
                         value: _selectedCategory,
-                        items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        items: _categories
+                            .map(
+                              (c) => DropdownMenuItem(value: c, child: Text(c)),
+                            )
+                            .toList(),
                         onChanged: (v) {
                           if (v == null) return;
                           setState(() {
                             _selectedCategory = v;
                           });
                         },
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -221,11 +263,19 @@ class _MainPageWidget extends State<MainPageWidget> {
                 // 直近の支出
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
-                  child: Text('直近の支出', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    '直近の支出',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
 
                 _expenses.isEmpty
-                    ? const Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text('まだ支出がありません')))
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('まだ支出がありません'),
+                        ),
+                      )
                     : ListView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         shrinkWrap: true,
@@ -234,7 +284,10 @@ class _MainPageWidget extends State<MainPageWidget> {
                           final e = _expenses[index];
                           return ListTile(
                             dense: true,
-                            title: Text(e.category, style: const TextStyle(fontSize: 12)),
+                            title: Text(
+                              e.category,
+                              style: const TextStyle(fontSize: 12),
+                            ),
                             subtitle: Text(
                               e.memo.isEmpty
                                   ? '${e.date.month}/${e.date.day}'
@@ -244,7 +297,13 @@ class _MainPageWidget extends State<MainPageWidget> {
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('¥${e.amount}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                Text(
+                                  '¥${e.amount}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 PopupMenuButton<String>(
                                   icon: const Icon(Icons.more_horiz),
                                   onSelected: (value) {
@@ -283,10 +342,7 @@ class _ExpenseEditDialog extends StatefulWidget {
   final Expense expense;
   final List<String> categories;
 
-  const _ExpenseEditDialog({
-    required this.expense,
-    required this.categories,
-  });
+  const _ExpenseEditDialog({required this.expense, required this.categories});
 
   @override
   State<_ExpenseEditDialog> createState() => _ExpenseEditDialogState();
@@ -304,7 +360,9 @@ class _ExpenseEditDialogState extends State<_ExpenseEditDialog> {
     _category = widget.categories.contains(widget.expense.category)
         ? widget.expense.category
         : widget.categories.first;
-    _amountController = TextEditingController(text: widget.expense.amount.toString());
+    _amountController = TextEditingController(
+      text: widget.expense.amount.toString(),
+    );
     _memoController = TextEditingController(text: widget.expense.memo);
   }
 
@@ -349,10 +407,12 @@ class _ExpenseEditDialogState extends State<_ExpenseEditDialog> {
               value: _category,
               decoration: const InputDecoration(labelText: 'カテゴリ'),
               items: widget.categories
-                  .map((category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      ))
+                  .map(
+                    (category) => DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) {
                 if (value == null) return;
@@ -384,10 +444,7 @@ class _ExpenseEditDialogState extends State<_ExpenseEditDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('キャンセル'),
         ),
-        TextButton(
-          onPressed: _save,
-          child: const Text('保存'),
-        ),
+        TextButton(onPressed: _save, child: const Text('保存')),
       ],
     );
   }
