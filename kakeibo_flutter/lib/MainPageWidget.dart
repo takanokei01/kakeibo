@@ -66,14 +66,14 @@ class _MainPageWidget extends State<MainPageWidget> {
     await ExpenseDatabase.deleteExpense(id);
   }
 
-  Future<void> _editExpense(Expense expense) async {
+  Future<Expense?> _editExpense(Expense expense) async {
     final updated = await showDialog<Expense>(
       context: context,
       builder: (context) =>
           _ExpenseEditDialog(expense: expense, categories: _categories),
     );
 
-    if (updated == null) return;
+    if (updated == null) return null;
 
     setState(() {
       final index = _expenses.indexWhere((e) => e.id == updated.id);
@@ -82,9 +82,10 @@ class _MainPageWidget extends State<MainPageWidget> {
       }
     });
     await ExpenseDatabase.updateExpense(updated);
+    return updated;
   }
 
-  Future<void> _confirmDeleteExpense(Expense expense) async {
+  Future<bool> _confirmDeleteExpense(Expense expense) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -105,7 +106,22 @@ class _MainPageWidget extends State<MainPageWidget> {
 
     if (shouldDelete == true) {
       await _removeExpense(expense.id);
+      return true;
     }
+    return false;
+  }
+
+  Future<void> _openHistory() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HistoryScreen(
+          expenses: _expenses,
+          onEditExpense: _editExpense,
+          onDeleteExpense: _confirmDeleteExpense,
+        ),
+      ),
+    );
   }
 
   int get _monthTotal {
@@ -117,6 +133,8 @@ class _MainPageWidget extends State<MainPageWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final recentExpenses = _expenses.take(10).toList();
+
     return Scaffold(
       appBar: AppBar(titleSpacing: 0, title: const Text('MY家計簿')),
       drawer: Drawer(
@@ -182,15 +200,7 @@ class _MainPageWidget extends State<MainPageWidget> {
                         ],
                       ),
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  HistoryScreen(expenses: _expenses),
-                            ),
-                          );
-                        },
+                        onPressed: _openHistory,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                         ),
@@ -269,66 +279,72 @@ class _MainPageWidget extends State<MainPageWidget> {
                   ),
                 ),
 
-                _expenses.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text('まだ支出がありません'),
+                if (_expenses.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('まだ支出がありません'),
+                    ),
+                  )
+                else ...[
+                  ListView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    itemCount: recentExpenses.length,
+                    itemBuilder: (context, index) {
+                      final e = recentExpenses[index];
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          e.category,
+                          style: const TextStyle(fontSize: 12),
                         ),
-                      )
-                    : ListView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        itemCount: _expenses.length,
-                        itemBuilder: (context, index) {
-                          final e = _expenses[index];
-                          return ListTile(
-                            dense: true,
-                            title: Text(
-                              e.category,
-                              style: const TextStyle(fontSize: 12),
+                        subtitle: Text(
+                          e.memo.isEmpty
+                              ? '${e.date.month}/${e.date.day}'
+                              : '${e.date.month}/${e.date.day}  ${e.memo}',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '¥${e.amount}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            subtitle: Text(
-                              e.memo.isEmpty
-                                  ? '${e.date.month}/${e.date.day}'
-                                  : '${e.date.month}/${e.date.day}  ${e.memo}',
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '¥${e.amount}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_horiz),
-                                  onSelected: (value) {
-                                    if (value == 'edit') {
-                                      _editExpense(e);
-                                    } else if (value == 'delete') {
-                                      _confirmDeleteExpense(e);
-                                    }
-                                  },
-                                  itemBuilder: (context) => const [
-                                    PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('編集'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text('削除'),
-                                    ),
-                                  ],
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_horiz),
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _editExpense(e);
+                                } else if (value == 'delete') {
+                                  _confirmDeleteExpense(e);
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(value: 'edit', child: Text('編集')),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('削除'),
                                 ),
                               ],
                             ),
-                          );
-                        },
-                      ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _openHistory,
+                      child: const Text('もっと見る'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -1,27 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:sample/models/expense.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   final List<Expense> expenses;
+  final Future<Expense?> Function(Expense expense) onEditExpense;
+  final Future<bool> Function(Expense expense) onDeleteExpense;
 
-  const HistoryScreen({Key? key, required this.expenses}) : super(key: key);
+  const HistoryScreen({
+    super.key,
+    required this.expenses,
+    required this.onEditExpense,
+    required this.onDeleteExpense,
+  });
 
-  // 月ごとに支出をグループ化
-  Map<String, List<Expense>> _groupExpensesByMonth() {
-    final grouped = <String, List<Expense>>{};
-    for (final expense in expenses) {
-      final key = '${expense.date.year}年${expense.date.month}月';
-      if (!grouped.containsKey(key)) {
-        grouped[key] = [];
-      }
-      grouped[key]!.add(expense);
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  late List<Expense> _expenses;
+
+  @override
+  void initState() {
+    super.initState();
+    _expenses = List<Expense>.from(widget.expenses);
+  }
+
+  Map<DateTime, List<Expense>> _groupExpensesByMonth() {
+    final grouped = <DateTime, List<Expense>>{};
+    for (final expense in _expenses) {
+      final key = DateTime(expense.date.year, expense.date.month);
+      grouped.putIfAbsent(key, () => []).add(expense);
     }
     return grouped;
   }
 
-  // 月の合計を計算
   int _monthTotal(List<Expense> monthExpenses) {
     return monthExpenses.fold(0, (sum, e) => sum + e.amount);
+  }
+
+  Future<void> _editExpense(Expense expense) async {
+    final updated = await widget.onEditExpense(expense);
+    if (updated == null) return;
+
+    setState(() {
+      final index = _expenses.indexWhere((e) => e.id == updated.id);
+      if (index != -1) {
+        _expenses[index] = updated;
+      }
+      _expenses.sort((a, b) => b.date.compareTo(a.date));
+    });
+  }
+
+  Future<void> _deleteExpense(Expense expense) async {
+    final deleted = await widget.onDeleteExpense(expense);
+    if (!deleted) return;
+
+    setState(() {
+      _expenses.removeWhere((e) => e.id == expense.id);
+    });
   }
 
   @override
@@ -47,23 +84,31 @@ class HistoryScreen extends StatelessWidget {
                       width: double.infinity,
                       color: Colors.blue.shade50,
                       padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 16),
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(month,
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold)),
-                          Text('合計: ¥$total',
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red)),
+                          Text(
+                            '${month.year}年${month.month}月',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '合計: ¥$total',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    ...monthExpenses.asMap().entries.map((entry) {
-                      final e = entry.value;
+                    ...monthExpenses.map((e) {
                       return ListTile(
                         title: Text(e.category),
                         subtitle: Text(
@@ -71,10 +116,36 @@ class HistoryScreen extends StatelessWidget {
                               ? '${e.date.year}/${e.date.month}/${e.date.day}'
                               : '${e.date.year}/${e.date.month}/${e.date.day}\n${e.memo}',
                         ),
-                        trailing: Text('¥${e.amount}',
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '¥${e.amount}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_horiz),
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _editExpense(e);
+                                } else if (value == 'delete') {
+                                  _deleteExpense(e);
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(value: 'edit', child: Text('編集')),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('削除'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       );
-                    }).toList(),
+                    }),
                     const Divider(),
                   ],
                 );
