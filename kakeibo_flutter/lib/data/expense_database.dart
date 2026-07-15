@@ -1,30 +1,26 @@
 import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sample/firebase_options.dart';
 import 'package:sample/models/expense.dart';
 
 class ExpenseDatabase {
-  static const _boxName = 'expenses';
-  static late Box<dynamic> _box;
+  static const _boxNamePrefix = 'expenses_';
+  static const _usersCollection = 'users';
+  static const _expensesCollection = 'expenses';
+
+  static Box<dynamic>? _box;
   static FirebaseFirestore? _firestore;
   static bool _firestoreEnabled = false;
+  static String? _userId;
   static StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
 
-  /// 初期化: Hive と（可能であれば）Firebase を初期化し、Firestore の変更をローカル Hive に反映するリスナーを開始します。
   static Future<void> init() async {
-    // Hive 初期化
-    try {
-      await Hive.initFlutter();
-      _box = await Hive.openBox(_boxName);
-    } catch (e) {
-      print('Hive initialization error: $e');
-      rethrow;
-    }
+    await Hive.initFlutter();
 
-    // Firebase がまだ初期化されていなければ、生成された options で初期化
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(
@@ -33,121 +29,185 @@ class ExpenseDatabase {
       }
       _firestore = FirebaseFirestore.instance;
       _firestoreEnabled = true;
-
-      // Firestore -> Hive の一方向同期（リアルタイム）
-      _subscription = _firestore!
-          .collection(_boxName)
-          .snapshots()
-          .listen((snapshot) {
-        for (final change in snapshot.docChanges) {
-          final doc = change.doc;
-          if (change.type == DocumentChangeType.added || change.type == DocumentChangeType.modified) {
-            final data = doc.data();
-            if (data != null) {
-              try {
-                final expense = Expense.fromJson(Map<String, dynamic>.from(data));
-                _box.put(expense.id, expense.toJson());
-              } catch (e) {
-                print('Error converting Firestore doc to Expense: $e');
-              }
-            }
-          } else if (change.type == DocumentChangeType.removed) {
-            _box.delete(doc.id);
-          }
-        }
-        print('Firestore sync: received ${snapshot.docChanges.length} changes');
-      }, onError: (e) {
-        print('Firestore listener error: $e');
-      });
-    } catch (e) {
-      print('Firebase init failed or not configured: $e');
+    } catch (error) {
+      debugPrint('Firebase init failed or not configured: $error');
       _firestoreEnabled = false;
     }
   }
 
-  static Box<dynamic> get box => _box;
+  static Future<void> setUser(String? userId) async {
+    if (_userId == userId && (_box?.isOpen ?? false)) {
+      return;
+    }
+
+    await _subscription?.cancel();
+    _subscription = null;
+
+    final previousBox = _box;
+    _box = null;
+    _userId = null;
+    if (previousBox != null && previousBox.isOpen) {
+      await previousBox.close();
+    }
+
+    if (userId == null) {
+      return;
+    }
+
+    final box = await Hive.openBox<dynamic>(_boxNameForUser(userId));
+    _box = box;
+    _userId = userId;
+
+    if (!_firestoreEnabled || _firestore == null) {
+      return;
+    }
+
+    final initialSync = Completer<void>();
+    _subscription = _collectionFor(userId).snapshots().listen(
+      (snapshot) async {
+        if (_userId != userId || _box != box || !box.isOpen) {
+          if (!initialSync.isCompleted) initialSync.complete();
+          return;
+        }
+
+        try {
+          for (final change in snapshot.docChanges) {
+            final document = change.doc;
+            if (change.type == DocumentChangeType.removed) {
+              await box.delete(document.id);
+              continue;
+            }
+
+            final data = document.data();
+            if (data == null) {
+              continue;
+            }
+
+            try {
+              final expense = Expense.fromJson(data);
+              await box.put(expense.id, expense.toJson());
+            } catch (error) {
+              debugPrint('Error converting Firestore doc to Expense: $error');
+            }
+          }
+        } catch (error) {
+          debugPrint('Error syncing Firestore expenses: $error');
+        } finally {
+          if (!initialSync.isCompleted) initialSync.complete();
+        }
+      },
+      onError: (Object error) {
+        debugPrint('Firestore listener error: $error');
+        if (!initialSync.isCompleted) initialSync.complete();
+      },
+    );
+
+    await initialSync.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {},
+    );
+  }
 
   static Future<List<Expense>> getExpenses() async {
+    final box = _requireBox();
     try {
-      final values = _box.values.toList();
-      final expenses = values
-          .whereType<Map<dynamic, dynamic>>()
-          .map((json) => Expense.fromJson(Map<String, dynamic>.from(json)))
-          .toList();
-      expenses.sort((a, b) => b.date.compareTo(a.date));
+      final expenses =
+          box.values
+              .whereType<Map<dynamic, dynamic>>()
+              .map((json) => Expense.fromJson(Map<String, dynamic>.from(json)))
+              .toList()
+            ..sort((first, second) => second.date.compareTo(first.date));
       return expenses;
-    } catch (e) {
-      print('Error loading expenses: $e');
+    } catch (error) {
+      debugPrint('Error loading expenses: $error');
       return [];
     }
   }
 
-  /// 追加: Hive に保存した後、Firestore にも書き込みを試みます。
   static Future<void> insertExpense(Expense expense) async {
-    try {
-      await _box.put(expense.id, expense.toJson());
-    } catch (e) {
-      print('Error inserting expense into Hive: $e');
-      rethrow;
-    }
+    final box = _requireBox();
+    final userId = _requireUserId();
+    await box.put(expense.id, expense.toJson());
 
     if (_firestoreEnabled && _firestore != null) {
       try {
-        await _firestore!.collection(_boxName).doc(expense.id).set(expense.toJson());
-      } catch (e) {
-        print('Error writing expense to Firestore: $e');
+        await _collectionFor(userId).doc(expense.id).set(expense.toJson());
+      } catch (error) {
+        debugPrint('Error writing expense to Firestore: $error');
       }
     }
   }
 
-  /// 更新: Hive と Firestore の両方に上書き保存します。
   static Future<void> updateExpense(Expense expense) async {
     await insertExpense(expense);
   }
 
-  /// 削除: Hive と Firestore の両方から削除します。
   static Future<void> deleteExpense(String id) async {
-    try {
-      await _box.delete(id);
-    } catch (e) {
-      print('Error deleting expense from Hive: $e');
-      rethrow;
-    }
+    final box = _requireBox();
+    final userId = _requireUserId();
+    await box.delete(id);
 
     if (_firestoreEnabled && _firestore != null) {
       try {
-        await _firestore!.collection(_boxName).doc(id).delete();
-      } catch (e) {
-        print('Error deleting expense from Firestore: $e');
+        await _collectionFor(userId).doc(id).delete();
+      } catch (error) {
+        debugPrint('Error deleting expense from Firestore: $error');
       }
     }
   }
 
-  /// 完全クリア（開発用）
   static Future<void> clearAll() async {
-    try {
-      await _box.clear();
-    } catch (e) {
-      print('Error clearing expenses: $e');
-      rethrow;
-    }
+    final box = _requireBox();
+    final userId = _requireUserId();
+    await box.clear();
+
     if (_firestoreEnabled && _firestore != null) {
       try {
         final batch = _firestore!.batch();
-        final snapshots = await _firestore!.collection(_boxName).get();
-        for (final doc in snapshots.docs) {
-          batch.delete(doc.reference);
+        final snapshots = await _collectionFor(userId).get();
+        for (final document in snapshots.docs) {
+          batch.delete(document.reference);
         }
         await batch.commit();
-      } catch (e) {
-        print('Error clearing Firestore expenses: $e');
+      } catch (error) {
+        debugPrint('Error clearing Firestore expenses: $error');
       }
     }
   }
 
-  /// アプリ終了時に呼ぶと Firestore リスナーを解除します。
+  static CollectionReference<Map<String, dynamic>> _collectionFor(
+    String userId,
+  ) {
+    return _firestore!
+        .collection(_usersCollection)
+        .doc(userId)
+        .collection(_expensesCollection);
+  }
+
+  static String _boxNameForUser(String userId) {
+    final encodedUserId = userId.codeUnits
+        .map((unit) => unit.toRadixString(16).padLeft(4, '0'))
+        .join();
+    return '$_boxNamePrefix$encodedUserId';
+  }
+
+  static Box<dynamic> _requireBox() {
+    final box = _box;
+    if (box == null || !box.isOpen || _userId == null) {
+      throw StateError('ExpenseDatabase has no authenticated user.');
+    }
+    return box;
+  }
+
+  static String _requireUserId() {
+    final userId = _userId;
+    if (userId == null) {
+      throw StateError('ExpenseDatabase has no authenticated user.');
+    }
+    return userId;
+  }
+
   static Future<void> dispose() async {
-    await _subscription?.cancel();
-    _subscription = null;
+    await setUser(null);
   }
 }

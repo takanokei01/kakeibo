@@ -7,6 +7,8 @@ import 'package:sample/widgets/num_pad.dart';
 import 'package:sample/screens/history_screen.dart';
 
 class MainPageWidget extends StatefulWidget {
+  const MainPageWidget({super.key});
+
   @override
   State<StatefulWidget> createState() {
     return _MainPageWidget();
@@ -27,6 +29,7 @@ class _MainPageWidget extends State<MainPageWidget> {
   Future<void> _loadExpenses() async {
     try {
       final databaseExpenses = await ExpenseDatabase.getExpenses();
+      if (!mounted) return;
       setState(() {
         _expenses.clear();
         _expenses.addAll(databaseExpenses);

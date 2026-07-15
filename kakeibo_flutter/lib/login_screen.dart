@@ -1,28 +1,90 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sample/data/expense_database.dart';
 
 import 'MainPageWidget.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        if (snapshot.hasData) {
-          return MainPageWidget();
-        }
-        return const LoginScreen();
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  StreamSubscription<User?>? _authSubscription;
+  Future<void> _databaseSwitch = Future<void>.value();
+  User? _user;
+  Object? _error;
+  bool _loading = true;
+  int _authChangeId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
+      _handleAuthChanged,
+      onError: (Object error) {
+        if (!mounted) return;
+        setState(() {
+          _error = error;
+          _loading = false;
+        });
       },
     );
+  }
+
+  Future<void> _handleAuthChanged(User? user) async {
+    final authChangeId = ++_authChangeId;
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+
+    try {
+      _databaseSwitch = _databaseSwitch.then(
+        (_) => ExpenseDatabase.setUser(user?.uid),
+        onError: (_) => ExpenseDatabase.setUser(user?.uid),
+      );
+      await _databaseSwitch;
+      if (!mounted || authChangeId != _authChangeId) return;
+      setState(() {
+        _user = user;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted || authChangeId != _authChangeId) return;
+      setState(() {
+        _error = error;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_error != null) {
+      return Scaffold(body: Center(child: Text('データの読み込みに失敗しました: $_error')));
+    }
+    final user = _user;
+    if (user != null) {
+      return MainPageWidget(key: ValueKey(user.uid));
+    }
+    return const LoginScreen();
   }
 }
 
@@ -244,9 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
                         },
                   child: Text(
-                    _isRegister
-                        ? 'すでにアカウントをお持ちですか？ログイン'
-                        : 'アカウントがない場合はこちら',
+                    _isRegister ? 'すでにアカウントをお持ちですか？ログイン' : 'アカウントがない場合はこちら',
                   ),
                 ),
               ],
